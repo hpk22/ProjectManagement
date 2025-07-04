@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Http;
-using Microsoft.AspNetCore.Cors;
-using System.Web.Http.Cors;  // ✅ Correct for Web API 2
-
+﻿using System.Web.Http;
+using System.Web.Http.Cors;
+using Microsoft.Owin.Security.OAuth;
 
 namespace ProjectManagement
 {
@@ -12,17 +8,23 @@ namespace ProjectManagement
     {
         public static void Register(HttpConfiguration config)
         {
-            var cors = new System.Web.Http.Cors.EnableCorsAttribute("*", "*", "*");  // origin, headers, methods
+            // Enable CORS (open for now, restrict later if needed)
+            var cors = new EnableCorsAttribute("*", "*", "*");
             config.EnableCors(cors);
-            
-            config.MapHttpAttributeRoutes();  // 🔥 Required!
 
+            // Enable JWT Bearer token authentication
+            config.SuppressDefaultHostAuthentication();
+            config.Filters.Add(new HostAuthenticationFilter(OAuthDefaults.AuthenticationType));
+
+            // Attribute routing
+            config.MapHttpAttributeRoutes();
+
+            // Default route
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
                 routeTemplate: "api/{controller}/{action}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
         }
-
     }
 }

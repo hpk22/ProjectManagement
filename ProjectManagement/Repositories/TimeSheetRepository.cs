@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using ProjectManagement.Models;
 
@@ -14,16 +15,14 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<TimeSheet>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"SELECT * FROM TimeSheets
-                WHERE (@user IS NULL OR UserID = @user)
-                  AND (@project IS NULL OR ProjectID = @project)
-                  AND (@start IS NULL OR WorkDate >= @start)
-                  AND (@end IS NULL OR WorkDate <= @end)", con))
+            using (var cmd = new SqlCommand("sp_GetAllTimesheets", con))
             {
-                cmd.Parameters.AddWithValue("@user", (object)userId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@project", (object)projectId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@start", (object)startDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@end", (object)endDate ?? DBNull.Value);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@UserID", (object)userId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ProjectID", (object)projectId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@StartDate", (object)startDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@EndDate", (object)endDate ?? DBNull.Value);
+
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
@@ -33,14 +32,15 @@ namespace ProjectManagement.Repositories
                         TimeSheetID = (int)rdr["TimeSheetID"],
                         UserID = (int)rdr["UserID"],
                         ProjectID = (int)rdr["ProjectID"],
-                        TaskID = (int)rdr["TaskID"],
                         WorkDate = (DateTime)rdr["WorkDate"],
                         HoursWorked = (decimal)rdr["HoursWorked"],
                         Description = rdr["Description"]?.ToString(),
                         Status = rdr["Status"].ToString(),
                         SubmittedDate = (DateTime)rdr["SubmittedDate"],
                         ApprovedBy = rdr["ApprovedBy"] == DBNull.Value ? null : (int?)rdr["ApprovedBy"],
-                        ApprovalDate = rdr["ApprovalDate"] == DBNull.Value ? null : (DateTime?)rdr["ApprovalDate"]
+                        ApprovalDate = rdr["ApprovalDate"] == DBNull.Value ? null : (DateTime?)rdr["ApprovalDate"],
+                        ProjectName = rdr["ProjectName"].ToString(),
+                        UserName = rdr["Username"].ToString()
                     });
                 }
             }
@@ -49,42 +49,50 @@ namespace ProjectManagement.Repositories
 
         public TimeSheet SubmitTimesheet(TimeSheet t)
         {
+            int newId;
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"INSERT INTO TimeSheets
-                (UserID, ProjectID, TaskID, WorkDate, HoursWorked, Description, Status, SubmittedDate)
-                OUTPUT INSERTED.TimeSheetID
-                VALUES (@uid, @pid, @tid, @date, @hours, @desc, 'Submitted', GETDATE())", con))
+            using (var cmd = new SqlCommand("sp_SubmitTimesheet", con))
             {
-                cmd.Parameters.AddWithValue("@uid", t.UserID);
-                cmd.Parameters.AddWithValue("@pid", t.ProjectID);
-                cmd.Parameters.AddWithValue("@tid", t.TaskID);
-                cmd.Parameters.AddWithValue("@date", t.WorkDate);
-                cmd.Parameters.AddWithValue("@hours", t.HoursWorked);
-                cmd.Parameters.AddWithValue("@desc", (object)t.Description ?? DBNull.Value);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@UserID", t.UserID);
+                cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
+                cmd.Parameters.AddWithValue("@WorkDate", t.WorkDate);
+                cmd.Parameters.AddWithValue("@HoursWorked", t.HoursWorked);
+                cmd.Parameters.AddWithValue("@Description", (object)t.Description ?? DBNull.Value);
+
+                var outParam = new SqlParameter("@NewID", SqlDbType.Int) { Direction = ParameterDirection.Output };
+                cmd.Parameters.Add(outParam);
+
                 con.Open();
-                int id = (int)cmd.ExecuteScalar();
-                return GetAllTimesheets(t.UserID, t.ProjectID, t.WorkDate, t.WorkDate).Find(x => x.TimeSheetID == id);
+                cmd.ExecuteNonQuery();
+                newId = (int)outParam.Value;
             }
+
+            return GetAllTimesheets(t.UserID, t.ProjectID, t.WorkDate, t.WorkDate).Find(x => x.TimeSheetID == newId);
         }
 
-        public bool ApproveTimesheet(int id)
+        public bool ApproveTimesheet(int id, int approverId)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("UPDATE TimeSheets SET Status='Approved', ApprovalDate=GETDATE() WHERE TimeSheetID=@id", con))
+            using (var cmd = new SqlCommand("sp_ApproveTimesheet", con))
             {
-                cmd.Parameters.AddWithValue("@id", id);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TimeSheetID", id);
+                cmd.Parameters.AddWithValue("@ApproverID", approverId);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
 
-        public bool RejectTimesheet(int id, string reason)
+        public bool RejectTimesheet(int id, string reason, int approverId)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("UPDATE TimeSheets SET Status='Rejected', Description=@reason WHERE TimeSheetID=@id", con))
+            using (var cmd = new SqlCommand("sp_RejectTimesheet", con))
             {
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@reason", reason);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TimeSheetID", id);
+                cmd.Parameters.AddWithValue("@Reason", reason);
+                cmd.Parameters.AddWithValue("@ApproverID", approverId);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }

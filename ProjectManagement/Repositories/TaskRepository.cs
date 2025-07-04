@@ -14,13 +14,17 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<Task>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM Tasks", con))
+            using (var cmd = new SqlCommand("sp_GetAllTasks", con))
             {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
                 {
-                    list.Add(MapTask(rdr));
+                    var task = MapTask(rdr);
+                    task.ProjectName = rdr["ProjectName"].ToString();
+                    task.AssigneeName = rdr["AssigneeName"].ToString();
+                    list.Add(task);
                 }
             }
             return list;
@@ -29,8 +33,9 @@ namespace ProjectManagement.Repositories
         public Task GetById(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM Tasks WHERE TaskID = @id", con))
+            using (var cmd = new SqlCommand("sp_GetTaskById", con))
             {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
@@ -41,26 +46,21 @@ namespace ProjectManagement.Repositories
         public Task Create(Task t)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"
-                INSERT INTO Tasks 
-                (ProjectID, TaskName, Description, StartDate, DueDate, CompletionDate, Status, Priority, EstimatedHours, ActualHours, AssignedTo, CreatedBy, CreatedDate)
-                OUTPUT INSERTED.TaskID
-                VALUES 
-                (@ProjectID, @TaskName, @Description, @StartDate, @DueDate, @CompletionDate, @Status, @Priority, @EstimatedHours, @ActualHours, @AssignedTo, @CreatedBy, GETDATE())", con))
+            using (var cmd = new SqlCommand("sp_CreateTask", con))
             {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
                 cmd.Parameters.AddWithValue("@TaskName", t.TaskName);
                 cmd.Parameters.AddWithValue("@Description", t.Description);
                 cmd.Parameters.AddWithValue("@StartDate", t.StartDate);
                 cmd.Parameters.AddWithValue("@DueDate", t.DueDate);
-                cmd.Parameters.AddWithValue("@CompletionDate", (object)t.CompletionDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@CompletionDate", ToDbValue(t.CompletionDate));
                 cmd.Parameters.AddWithValue("@Status", t.Status);
                 cmd.Parameters.AddWithValue("@Priority", t.Priority);
                 cmd.Parameters.AddWithValue("@EstimatedHours", t.EstimatedHours);
                 cmd.Parameters.AddWithValue("@ActualHours", (object)t.ActualHours ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@AssignedTo", t.AssignedTo);
                 cmd.Parameters.AddWithValue("@CreatedBy", t.CreatedBy);
-
                 con.Open();
                 int newId = (int)cmd.ExecuteScalar();
                 return GetById(newId);
@@ -70,28 +70,23 @@ namespace ProjectManagement.Repositories
         public Task Update(int id, Task t)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"
-                UPDATE Tasks SET
-                    ProjectID=@ProjectID, TaskName=@TaskName, Description=@Description, StartDate=@StartDate, 
-                    DueDate=@DueDate, CompletionDate=@CompletionDate, Status=@Status, Priority=@Priority,
-                    EstimatedHours=@EstimatedHours, ActualHours=@ActualHours, AssignedTo=@AssignedTo,
-                    ModifiedBy=@ModifiedBy, ModifiedDate=GETDATE()
-                WHERE TaskID=@TaskID", con))
+            using (var cmd = new SqlCommand("sp_UpdateTask", con))
             {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@TaskID", id);
                 cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
-                cmd.Parameters.AddWithValue("@TaskName", t.TaskName);
-                cmd.Parameters.AddWithValue("@Description", t.Description);
-                cmd.Parameters.AddWithValue("@StartDate", t.StartDate);
-                cmd.Parameters.AddWithValue("@DueDate", t.DueDate);
-                cmd.Parameters.AddWithValue("@CompletionDate", (object)t.CompletionDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@Status", t.Status);
-                cmd.Parameters.AddWithValue("@Priority", t.Priority);
+                cmd.Parameters.AddWithValue("@TaskName", (object)t.TaskName ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Description", (object)t.Description ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@StartDate", ToDbValue(t.StartDate));
+                cmd.Parameters.AddWithValue("@DueDate", ToDbValue(t.DueDate));
+                cmd.Parameters.AddWithValue("@CompletionDate", ToDbValue(t.CompletionDate));
+                cmd.Parameters.AddWithValue("@Status", (object)t.Status ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Priority", (object)t.Priority ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@EstimatedHours", t.EstimatedHours);
                 cmd.Parameters.AddWithValue("@ActualHours", (object)t.ActualHours ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@AssignedTo", t.AssignedTo);
-                cmd.Parameters.AddWithValue("@ModifiedBy", t.ModifiedBy ?? (object)DBNull.Value);
-
+                cmd.Parameters.AddWithValue("@ModifiedBy", (object)t.ModifiedBy ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ModifiedDate", ToDbValue(t.ModifiedDate));
                 con.Open();
                 cmd.ExecuteNonQuery();
                 return GetById(id);
@@ -101,21 +96,41 @@ namespace ProjectManagement.Repositories
         public bool Delete(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("DELETE FROM Tasks WHERE TaskID=@id", con))
+            using (var cmd = new SqlCommand("sp_DeleteTask", con))
             {
-                cmd.Parameters.AddWithValue("@id", id);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TaskID", id);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
 
+        public List<Task> GetTasksByUserId(int userId)
+        {
+            var list = new List<Task>();
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("sp_GetTasksByUserId", con))
+            {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                con.Open();
+                var rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    list.Add(MapTask(rdr));
+                }
+            }
+            return list;
+        }
+
         public bool AddDependency(int taskId, int dependsOnTaskId)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("INSERT INTO TaskDependencies (TaskID, DependsOnTaskID) VALUES (@taskId, @dependsOn)", con))
+            using (var cmd = new SqlCommand("sp_AddTaskDependency", con))
             {
-                cmd.Parameters.AddWithValue("@taskId", taskId);
-                cmd.Parameters.AddWithValue("@dependsOn", dependsOnTaskId);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TaskID", taskId);
+                cmd.Parameters.AddWithValue("@DependsOnTaskID", dependsOnTaskId);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
@@ -125,9 +140,10 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<TaskDependency>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM TaskDependencies WHERE TaskID = @taskId", con))
+            using (var cmd = new SqlCommand("sp_GetTaskDependencies", con))
             {
-                cmd.Parameters.AddWithValue("@taskId", taskId);
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TaskID", taskId);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
@@ -141,6 +157,29 @@ namespace ProjectManagement.Repositories
                 }
             }
             return list;
+        }
+
+        public List<Task> GetTasksByProjectId(int projectId)
+        {
+            var list = new List<Task>();
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("sp_GetTasksByProjectID", con))
+            {
+                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", projectId);
+                con.Open();
+                var rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    list.Add(MapTask(rdr));
+                }
+            }
+            return list;
+        }
+
+        private object ToDbValue(DateTime? date)
+        {
+            return (!date.HasValue || date.Value < new DateTime(1753, 1, 1)) ? DBNull.Value : (object)date.Value;
         }
 
         private Task MapTask(SqlDataReader rdr)

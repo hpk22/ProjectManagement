@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using ProjectManagement.Models;
@@ -54,6 +55,32 @@ namespace ProjectManagement.Repositories
                 }
                 return null;
             }
+        }
+
+        public List<Document> GetAllDocuments()
+        {
+            var list = new List<Document>();
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("SELECT * FROM Documents ORDER BY UploadDate DESC", con))
+            {
+                con.Open();
+                var rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    list.Add(new Document
+                    {
+                        DocumentID = (int)rdr["DocumentID"],
+                        DocumentName = rdr["DocumentName"].ToString(),
+                        FilePath = rdr["FilePath"].ToString(),
+                        FileSize = (int)rdr["FileSize"],
+                        FileType = rdr["FileType"].ToString(),
+                        UploadedBy = (int)rdr["UploadedBy"],
+                        UploadDate = (DateTime)rdr["UploadDate"],
+                        Description = rdr["Description"]?.ToString()
+                    });
+                }
+            }
+            return list;
         }
 
         public bool DeleteDocument(int id)

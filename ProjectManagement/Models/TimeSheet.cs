@@ -15,5 +15,9 @@ namespace ProjectManagement.Models
         public DateTime SubmittedDate { get; set; }
         public int? ApprovedBy { get; set; }
         public DateTime? ApprovalDate { get; set; }
+        public string UserName { get; set; }
+        public string ProjectName { get; set; }
+       
+
     }
 }

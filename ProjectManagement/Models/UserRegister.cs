@@ -14,6 +14,10 @@ namespace ProjectManagement.Models
         public string LastName { get; set; }
         public string PhoneNumber { get; set; }
         public int RoleID { get; set; }  // Optional: default = 3 (Team Member)
+
+        public string ClientName { get; set; }
+        public string ContactPerson { get; set; }
+        public string Address { get; set; }
     }
 
 }

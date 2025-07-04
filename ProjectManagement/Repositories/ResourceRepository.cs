@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using ProjectManagement.Models;
 
@@ -14,22 +15,15 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<Resource>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM Resources WHERE (@type IS NULL OR ResourceType = @type)", con))
+            using (var cmd = new SqlCommand("sp_GetAllResources", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@type", (object)type ?? DBNull.Value);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
                 {
-                    list.Add(new Resource
-                    {
-                        ResourceID = (int)rdr["ResourceID"],
-                        ResourceName = rdr["ResourceName"].ToString(),
-                        ResourceType = rdr["ResourceType"].ToString(),
-                        Cost = rdr["Cost"] != DBNull.Value ? Convert.ToDecimal(rdr["Cost"]) : (decimal?)null,
-                        Availability = Convert.ToDecimal(rdr["Availability"]),
-                        UserID = rdr["UserID"] == DBNull.Value ? null : (int?)rdr["UserID"]
-                    });
+                    list.Add(MapResource(rdr));
                 }
             }
             return list;
@@ -38,42 +32,30 @@ namespace ProjectManagement.Repositories
         public Resource GetResourceById(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM Resources WHERE ResourceID = @id", con))
+            using (var cmd = new SqlCommand("sp_GetResourceById", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
-                if (rdr.Read())
-                {
-                    return new Resource
-                    {
-                        ResourceID = (int)rdr["ResourceID"],
-                        ResourceName = rdr["ResourceName"].ToString(),
-                        ResourceType = rdr["ResourceType"].ToString(),
-                        Cost = rdr["Cost"] != DBNull.Value ? Convert.ToDecimal(rdr["Cost"]) : (decimal?)null,
-                        Availability = Convert.ToDecimal(rdr["Availability"]),
-                        UserID = rdr["UserID"] == DBNull.Value ? null : (int?)rdr["UserID"]
-                    };
-                }
-                return null;
+                return rdr.Read() ? MapResource(rdr) : null;
             }
         }
 
         public Resource CreateResource(Resource r)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"INSERT INTO Resources 
-                (ResourceName, ResourceType, Cost, Availability, UserID)
-                OUTPUT INSERTED.ResourceID 
-                VALUES (@name, @type, @cost, @avail, @user)", con))
+            using (var cmd = new SqlCommand("sp_CreateResource", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@name", r.ResourceName);
                 cmd.Parameters.AddWithValue("@type", r.ResourceType);
                 cmd.Parameters.AddWithValue("@cost", (object)r.Cost ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@avail", r.Availability);
                 cmd.Parameters.AddWithValue("@user", (object)r.UserID ?? DBNull.Value);
+
                 con.Open();
-                int id = (int)cmd.ExecuteScalar();
+                int id = Convert.ToInt32(cmd.ExecuteScalar());
                 return GetResourceById(id);
             }
         }
@@ -81,16 +63,16 @@ namespace ProjectManagement.Repositories
         public Resource UpdateResource(int id, Resource r)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"UPDATE Resources SET 
-                ResourceName=@name, ResourceType=@type, Cost=@cost, Availability=@avail, UserID=@user 
-                WHERE ResourceID=@id", con))
+            using (var cmd = new SqlCommand("sp_UpdateResource", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 cmd.Parameters.AddWithValue("@name", r.ResourceName);
                 cmd.Parameters.AddWithValue("@type", r.ResourceType);
                 cmd.Parameters.AddWithValue("@cost", (object)r.Cost ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@avail", r.Availability);
                 cmd.Parameters.AddWithValue("@user", (object)r.UserID ?? DBNull.Value);
+
                 con.Open();
                 cmd.ExecuteNonQuery();
                 return GetResourceById(id);
@@ -100,12 +82,26 @@ namespace ProjectManagement.Repositories
         public bool DeleteResource(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("DELETE FROM Resources WHERE ResourceID=@id", con))
+            using (var cmd = new SqlCommand("sp_DeleteResource", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
+        }
+
+        private Resource MapResource(SqlDataReader rdr)
+        {
+            return new Resource
+            {
+                ResourceID = (int)rdr["ResourceID"],
+                ResourceName = rdr["ResourceName"].ToString(),
+                ResourceType = rdr["ResourceType"].ToString(),
+                Cost = rdr["Cost"] != DBNull.Value ? Convert.ToDecimal(rdr["Cost"]) : (decimal?)null,
+                Availability = Convert.ToDecimal(rdr["Availability"]),
+                UserID = rdr["UserID"] == DBNull.Value ? null : (int?)rdr["UserID"]
+            };
         }
     }
 }

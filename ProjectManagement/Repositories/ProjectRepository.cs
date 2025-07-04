@@ -15,14 +15,12 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<Project>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"SELECT * FROM Projects 
-                WHERE (@status IS NULL OR Status = @status)
-                  AND (@manager IS NULL OR ManagerID = @manager)
-                  AND (@client IS NULL OR ClientID = @client)", con))
+            using (var cmd = new SqlCommand("sp_GetAllProjects", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@status", (object)status ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@manager", (object)managerId ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@client", (object)clientId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@managerId", (object)managerId ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@clientId", (object)clientId ?? DBNull.Value);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
@@ -36,8 +34,9 @@ namespace ProjectManagement.Repositories
         public Project GetProjectById(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT * FROM Projects WHERE ProjectID = @id", con))
+            using (var cmd = new SqlCommand("sp_GetProjectById", con))
             {
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
@@ -48,26 +47,22 @@ namespace ProjectManagement.Repositories
         public Project CreateProject(Project p)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"
-                INSERT INTO Projects 
-                (ProjectName, Description, StartDate, EndDate, ActualEndDate, Status, Priority, Budget, ClientID, ManagerID, CreatedBy, CreatedDate) 
-                OUTPUT INSERTED.ProjectID 
-                VALUES 
-                (@name, @desc, @start, @end, @actual, @status, @priority, @budget, @client, @manager, @createdBy, GETDATE())", con))
+            using (var cmd = new SqlCommand("sp_CreateProject", con))
             {
-                cmd.Parameters.AddWithValue("@name", p.ProjectName);
-                cmd.Parameters.AddWithValue("@desc", p.Description);
-                cmd.Parameters.AddWithValue("@start", p.StartDate);
-                cmd.Parameters.AddWithValue("@end", (object)p.EndDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@actual", (object)p.ActualEndDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", p.Status);
-                cmd.Parameters.AddWithValue("@priority", p.Priority);
-                cmd.Parameters.AddWithValue("@budget", p.Budget);
-                cmd.Parameters.AddWithValue("@client", p.ClientID);
-                cmd.Parameters.AddWithValue("@manager", p.ManagerID);
-                cmd.Parameters.AddWithValue("@createdBy", p.CreatedBy);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectName", p.ProjectName);
+                cmd.Parameters.AddWithValue("@Description", p.Description);
+                cmd.Parameters.AddWithValue("@StartDate", p.StartDate);
+                cmd.Parameters.AddWithValue("@EndDate", (object)p.EndDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ActualEndDate", (object)p.ActualEndDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", p.Status);
+                cmd.Parameters.AddWithValue("@Priority", p.Priority);
+                cmd.Parameters.AddWithValue("@Budget", p.Budget);
+                cmd.Parameters.AddWithValue("@ClientID", p.ClientID);
+                cmd.Parameters.AddWithValue("@ManagerID", p.ManagerID);
+                cmd.Parameters.AddWithValue("@CreatedBy", p.CreatedBy);
                 con.Open();
-                int newId = (int)cmd.ExecuteScalar();
+                int newId = Convert.ToInt32(cmd.ExecuteScalar());
                 return GetProjectById(newId);
             }
         }
@@ -75,34 +70,21 @@ namespace ProjectManagement.Repositories
         public Project UpdateProject(int id, Project p)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"
-                UPDATE Projects SET 
-                    ProjectName=@name,
-                    Description=@desc,
-                    StartDate=@start,
-                    EndDate=@end,
-                    ActualEndDate=@actual,
-                    Status=@status,
-                    Priority=@priority,
-                    Budget=@budget,
-                    ClientID=@client,
-                    ManagerID=@manager,
-                    ModifiedBy=@modifiedBy,
-                    ModifiedDate=GETDATE()
-                WHERE ProjectID=@id", con))
+            using (var cmd = new SqlCommand("sp_UpdateProject", con))
             {
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@name", p.ProjectName);
-                cmd.Parameters.AddWithValue("@desc", p.Description);
-                cmd.Parameters.AddWithValue("@start", p.StartDate);
-                cmd.Parameters.AddWithValue("@end", (object)p.EndDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@actual", (object)p.ActualEndDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@status", p.Status);
-                cmd.Parameters.AddWithValue("@priority", p.Priority);
-                cmd.Parameters.AddWithValue("@budget", p.Budget);
-                cmd.Parameters.AddWithValue("@client", p.ClientID);
-                cmd.Parameters.AddWithValue("@manager", p.ManagerID);
-                cmd.Parameters.AddWithValue("@modifiedBy", p.ModifiedBy ?? (object)DBNull.Value);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", id);
+                cmd.Parameters.AddWithValue("@ProjectName", p.ProjectName);
+                cmd.Parameters.AddWithValue("@Description", p.Description);
+                cmd.Parameters.AddWithValue("@StartDate", p.StartDate);
+                cmd.Parameters.AddWithValue("@EndDate", (object)p.EndDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@ActualEndDate", (object)p.ActualEndDate ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@Status", p.Status);
+                cmd.Parameters.AddWithValue("@Priority", p.Priority);
+                cmd.Parameters.AddWithValue("@Budget", p.Budget);
+                cmd.Parameters.AddWithValue("@ClientID", p.ClientID);
+                cmd.Parameters.AddWithValue("@ManagerID", p.ManagerID);
+                cmd.Parameters.AddWithValue("@ModifiedBy", p.ModifiedBy ?? (object)DBNull.Value);
                 con.Open();
                 cmd.ExecuteNonQuery();
                 return GetProjectById(id);
@@ -112,43 +94,24 @@ namespace ProjectManagement.Repositories
         public bool DeleteProject(int id)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("DELETE FROM Projects WHERE ProjectID=@id", con))
+            using (var cmd = new SqlCommand("sp_DeleteProject", con))
             {
-                cmd.Parameters.AddWithValue("@id", id);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", id);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
 
-        private Project MapProject(SqlDataReader rdr)
-        {
-            return new Project
-            {
-                ProjectID = (int)rdr["ProjectID"],
-                ProjectName = rdr["ProjectName"].ToString(),
-                Description = rdr["Description"].ToString(),
-                StartDate = (DateTime)(rdr["StartDate"] != DBNull.Value ? Convert.ToDateTime(rdr["StartDate"]) : (DateTime?)null),
-                EndDate = rdr["EndDate"] != DBNull.Value ? Convert.ToDateTime(rdr["EndDate"]) : (DateTime?)null,
-                ActualEndDate = rdr["ActualEndDate"] != DBNull.Value ? Convert.ToDateTime(rdr["ActualEndDate"]) : (DateTime?)null,
-                Status = rdr["Status"].ToString(),
-                Priority = rdr["Priority"].ToString(),
-                Budget = rdr["Budget"] != DBNull.Value ? Convert.ToDecimal(rdr["Budget"]) : 0,
-                ClientID = rdr["ClientID"] != DBNull.Value ? Convert.ToInt32(rdr["ClientID"]) : 0,
-                ManagerID = rdr["ManagerID"] != DBNull.Value ? Convert.ToInt32(rdr["ManagerID"]) : 0
-            };
-        }
-
-
         public bool AddTeamMember(int projectId, int userId, string role)
         {
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand(@"
-        INSERT INTO ProjectTeam (ProjectID, UserID, Role, JoinDate) 
-        VALUES (@pid, @uid, @role, GETDATE())", con))
+            using (var cmd = new SqlCommand("sp_AddTeamMember", con))
             {
-                cmd.Parameters.AddWithValue("@pid", projectId);
-                cmd.Parameters.AddWithValue("@uid", userId);
-                cmd.Parameters.AddWithValue("@role", role);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", projectId);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                cmd.Parameters.AddWithValue("@Role", role);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
             }
@@ -158,9 +121,10 @@ namespace ProjectManagement.Repositories
         {
             var list = new List<ProjectTeamMember>();
             using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("SELECT UserID, Role, JoinDate, ExitDate FROM ProjectTeam WHERE ProjectID = @pid", con))
+            using (var cmd = new SqlCommand("sp_GetProjectTeam", con))
             {
-                cmd.Parameters.AddWithValue("@pid", projectId);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", projectId);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
@@ -177,6 +141,22 @@ namespace ProjectManagement.Repositories
             return list;
         }
 
-
+        private Project MapProject(SqlDataReader rdr)
+        {
+            return new Project
+            {
+                ProjectID = (int)rdr["ProjectID"],
+                ProjectName = rdr["ProjectName"].ToString(),
+                Description = rdr["Description"].ToString(),
+                StartDate = rdr["StartDate"] != DBNull.Value ? Convert.ToDateTime(rdr["StartDate"]) : (DateTime?)null,
+                EndDate = rdr["EndDate"] != DBNull.Value ? Convert.ToDateTime(rdr["EndDate"]) : (DateTime?)null,
+                ActualEndDate = rdr["ActualEndDate"] != DBNull.Value ? Convert.ToDateTime(rdr["ActualEndDate"]) : (DateTime?)null,
+                Status = rdr["Status"].ToString(),
+                Priority = rdr["Priority"].ToString(),
+                Budget = rdr["Budget"] != DBNull.Value ? Convert.ToDecimal(rdr["Budget"]) : 0,
+                ClientID = rdr["ClientID"] != DBNull.Value ? Convert.ToInt32(rdr["ClientID"]) : 0,
+                ManagerID = rdr["ManagerID"] != DBNull.Value ? Convert.ToInt32(rdr["ManagerID"]) : 0
+            };
+        }
     }
 }
