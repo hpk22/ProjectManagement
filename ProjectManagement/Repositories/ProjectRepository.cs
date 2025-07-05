@@ -133,6 +133,7 @@ namespace ProjectManagement.Repositories
                     {
                         UserID = (int)rdr["UserID"],
                         Role = rdr["Role"].ToString(),
+                        FullName = rdr["FullName"].ToString(),
                         JoinDate = Convert.ToDateTime(rdr["JoinDate"]),
                         ExitDate = rdr["ExitDate"] == DBNull.Value ? null : (DateTime?)rdr["ExitDate"]
                     });

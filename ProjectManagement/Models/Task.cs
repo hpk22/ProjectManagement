@@ -25,13 +25,8 @@
         public string AssigneeName { get; set; }
 
 
-        public List<TaskDependency> Dependencies { get; set; } = new List<TaskDependency>();
+        //public List<TaskDependency> Dependencies { get; set; } = new List<TaskDependency>();
     }
 
-    public class TaskDependency
-    {
-        public int DependencyID { get; set; }
-        public int TaskID { get; set; }
-        public int DependsOnTaskID { get; set; }
-    }
+   
 }

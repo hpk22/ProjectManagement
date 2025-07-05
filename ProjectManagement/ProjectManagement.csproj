@@ -263,9 +263,13 @@
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
     <Compile Include="Controllers\ClientsController.cs" />
     <Compile Include="Controllers\DashboardController.cs" />
+    <Compile Include="Scripts\ResourceController.cs" />
+    <Compile Include="Helpers\EmailSender.cs" />
     <Compile Include="Helpers\PasswordHelper.cs" />
     <Compile Include="Models\Client.cs" />
     <Compile Include="Models\DashboardStats.cs" />
+    <Compile Include="Models\ForgotPasswordRequest.cs" />
+    <Compile Include="Repositories\AccountRepository.cs" />
     <Compile Include="Repositories\ClientRepository.cs" />
     <Compile Include="Repositories\DashboardRepository.cs" />
     <Compile Include="Controllers\AuthController.cs" />
@@ -273,7 +277,6 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ProjectController.cs" />
     <Compile Include="Controllers\ReportController.cs" />
-    <Compile Include="Controllers\ResourceController.cs" />
     <Compile Include="Controllers\TaskController.cs" />
     <Compile Include="Controllers\TimeSheetController.cs" />
     <Compile Include="Controllers\UserController.cs" />

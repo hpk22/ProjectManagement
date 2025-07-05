@@ -8,8 +8,6 @@ using ProjectManagement.Repositories;
 namespace ProjectManagement.Controllers
 {
     [EnableCors(origins: "*", headers: "*", methods: "*")]
-
-    //[Authorize]
     [RoutePrefix("api/tasks")]
     public class TaskController : ApiController
     {
@@ -20,7 +18,14 @@ namespace ProjectManagement.Controllers
         [Route("")]
         public IHttpActionResult GetAll()
         {
-            return Ok(repo.GetAll());
+            try
+            {
+                return Ok(repo.GetAll());
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // GET: api/tasks/{id}
@@ -28,17 +33,31 @@ namespace ProjectManagement.Controllers
         [Route("{id}")]
         public IHttpActionResult GetById(int id)
         {
-            var task = repo.GetById(id);
-            return task != null ? Ok(task) : (IHttpActionResult)NotFound();
+            try
+            {
+                var task = repo.GetById(id);
+                return task != null ? Ok(task) : (IHttpActionResult)NotFound();
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
-        // ✅ GET: api/tasks/byproject/{projectId}
+        // GET: api/tasks/byproject/{projectId}
         [HttpGet]
         [Route("byproject/{projectId}")]
         public IHttpActionResult GetTasksByProject(int projectId)
         {
-            var tasks = repo.GetTasksByProjectId(projectId); // Make sure this method exists in the repository
-            return Ok(tasks);
+            try
+            {
+                var tasks = repo.GetTasksByProjectId(projectId);
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // POST: api/tasks
@@ -46,11 +65,17 @@ namespace ProjectManagement.Controllers
         [Route("")]
         public IHttpActionResult Create(Task model)
         {
-            var created = repo.Create(model);
-            return Ok(created);
+            try
+            {
+                var created = repo.Create(model);
+                return Ok(created);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
-        // PUT: api/tasks/{id}
         // PUT: api/tasks/{id}
         [HttpPut]
         [Route("{id}")]
@@ -58,17 +83,13 @@ namespace ProjectManagement.Controllers
         {
             try
             {
-                // Fetch the existing task
                 var existingTask = repo.GetById(id);
                 if (existingTask == null)
                     return NotFound();
 
-                // Only update fields that are provided (check for nulls/defaults)
                 if (!string.IsNullOrWhiteSpace(model.TaskName)) existingTask.TaskName = model.TaskName;
                 if (!string.IsNullOrWhiteSpace(model.Status)) existingTask.Status = model.Status;
                 if (model.AssignedTo != 0) existingTask.AssignedTo = model.AssignedTo;
-
-                // ⚠️ Do NOT overwrite dates, completion, priority etc. unless explicitly intended
 
                 var updated = repo.Update(id, existingTask);
                 return Ok(updated);
@@ -79,13 +100,19 @@ namespace ProjectManagement.Controllers
             }
         }
 
-
         // DELETE: api/tasks/{id}
         [HttpDelete]
         [Route("{id}")]
         public IHttpActionResult Delete(int id)
         {
-            return repo.Delete(id) ? Ok("Deleted") : (IHttpActionResult)BadRequest("Delete failed");
+            try
+            {
+                return repo.Delete(id) ? Ok("Deleted") : (IHttpActionResult)BadRequest("Delete failed");
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // GET: api/tasks/user/{userId}
@@ -93,26 +120,41 @@ namespace ProjectManagement.Controllers
         [Route("user/{userId}")]
         public IHttpActionResult GetTasksByUser(int userId)
         {
-            var tasks = repo.GetTasksByUserId(userId);
-            return Ok(tasks);
+            try
+            {
+                var tasks = repo.GetTasksByUserId(userId);
+                return Ok(tasks);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
-        // POST: api/tasks/{id}/dependencies
-        [HttpPost]
-        [Route("{id}/dependencies")]
-        public IHttpActionResult AddDependency(int id, [FromBody] int dependsOnTaskId)
+        // PUT: api/tasks/{id}/status
+        [HttpPut]
+        [Route("{id}/status")]
+        public IHttpActionResult UpdateStatus(int id, [FromBody] StatusUpdateModel model)
         {
-            bool added = repo.AddDependency(id, dependsOnTaskId);
-            return added ? Ok("Dependency added") : (IHttpActionResult)BadRequest("Failed to add dependency");
+            try
+            {
+                if (model == null || string.IsNullOrWhiteSpace(model.Status))
+                    return BadRequest("Status cannot be empty.");
+
+                bool updated = repo.UpdateTaskStatus(id, model.Status);
+                return updated ? Ok("Status updated successfully") : (IHttpActionResult)BadRequest("Failed to update status");
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
-        // GET: api/tasks/{id}/dependencies
-        [HttpGet]
-        [Route("{id}/dependencies")]
-        public IHttpActionResult GetDependencies(int id)
-        {
-            var deps = repo.GetDependencies(id);
-            return Ok(deps);
-        }
+        // (You can add dependency-related POSTs here later with try-catch too)
+    }
+
+    public class StatusUpdateModel
+    {
+        public string Status { get; set; }
     }
 }

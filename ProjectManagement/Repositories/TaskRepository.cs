@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using ProjectManagement.Models;
 
@@ -16,7 +17,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_GetAllTasks", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 con.Open();
                 var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
@@ -35,7 +36,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_GetTaskById", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@id", id);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
@@ -48,7 +49,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_CreateTask", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
                 cmd.Parameters.AddWithValue("@TaskName", t.TaskName);
                 cmd.Parameters.AddWithValue("@Description", t.Description);
@@ -72,7 +73,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_UpdateTask", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@TaskID", id);
                 cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
                 cmd.Parameters.AddWithValue("@TaskName", (object)t.TaskName ?? DBNull.Value);
@@ -98,7 +99,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_DeleteTask", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@TaskID", id);
                 con.Open();
                 return cmd.ExecuteNonQuery() > 0;
@@ -111,7 +112,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_GetTasksByUserId", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@UserID", userId);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
@@ -123,41 +124,7 @@ namespace ProjectManagement.Repositories
             return list;
         }
 
-        public bool AddDependency(int taskId, int dependsOnTaskId)
-        {
-            using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("sp_AddTaskDependency", con))
-            {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@TaskID", taskId);
-                cmd.Parameters.AddWithValue("@DependsOnTaskID", dependsOnTaskId);
-                con.Open();
-                return cmd.ExecuteNonQuery() > 0;
-            }
-        }
-
-        public List<TaskDependency> GetDependencies(int taskId)
-        {
-            var list = new List<TaskDependency>();
-            using (var con = new SqlConnection(cs))
-            using (var cmd = new SqlCommand("sp_GetTaskDependencies", con))
-            {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@TaskID", taskId);
-                con.Open();
-                var rdr = cmd.ExecuteReader();
-                while (rdr.Read())
-                {
-                    list.Add(new TaskDependency
-                    {
-                        DependencyID = (int)rdr["DependencyID"],
-                        TaskID = (int)rdr["TaskID"],
-                        DependsOnTaskID = (int)rdr["DependsOnTaskID"]
-                    });
-                }
-            }
-            return list;
-        }
+        
 
         public List<Task> GetTasksByProjectId(int projectId)
         {
@@ -165,7 +132,7 @@ namespace ProjectManagement.Repositories
             using (var con = new SqlConnection(cs))
             using (var cmd = new SqlCommand("sp_GetTasksByProjectID", con))
             {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@ProjectID", projectId);
                 con.Open();
                 var rdr = cmd.ExecuteReader();
@@ -175,6 +142,20 @@ namespace ProjectManagement.Repositories
                 }
             }
             return list;
+        }
+
+        // ✅ NEW: Update only status using sp_UpdateTaskStatus
+        public bool UpdateTaskStatus(int taskId, string status)
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("sp_UpdateTaskStatus", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@TaskID", taskId);
+                cmd.Parameters.AddWithValue("@Status", status);
+                con.Open();
+                return cmd.ExecuteNonQuery() > 0;
+            }
         }
 
         private object ToDbValue(DateTime? date)

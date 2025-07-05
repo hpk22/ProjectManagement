@@ -6,6 +6,7 @@ using System.Web.Http;
 using ProjectManagement.Models;
 using ProjectManagement.Security;
 using System.Web.Http.Cors;
+using ProjectManagement.Repositories;
 
 namespace ProjectManagement.Controllers
 {
@@ -105,6 +106,23 @@ namespace ProjectManagement.Controllers
             {
                 return InternalServerError(ex);
             }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("forgot-password")]
+        public IHttpActionResult ForgotPassword([FromBody] ForgotPasswordRequest model)
+        {
+            if (string.IsNullOrWhiteSpace(model.Email))
+                return BadRequest("Email is required.");
+
+            var repo = new AccountRepository();
+            string newPwd = repo.ResetPassword(model.Email);
+
+            if (newPwd == null)
+                return BadRequest("Email not registered.");
+
+            return Ok("✅ New password has been sent to your email.");
         }
 
         // POST: api/auth/reset-password (optional stub)

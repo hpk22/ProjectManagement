@@ -11,6 +11,7 @@ using ProjectManagement.Repositories;
 
 namespace ProjectManagement.Controllers
 {
+    //[Authorize]
     [RoutePrefix("api/documents")]
     public class DocumentController : ApiController
     {
@@ -61,7 +62,7 @@ namespace ProjectManagement.Controllers
                 }
 
                 // Get uploader ID from session
-                var sessionUserId = HttpContext.Current?.Session?["UserID"];
+                var sessionUserId = HttpContext.Current?.Session?["userId"];
                 if (sessionUserId == null)
                     return Unauthorized();
 

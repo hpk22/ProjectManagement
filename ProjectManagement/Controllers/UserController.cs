@@ -5,6 +5,7 @@ using ProjectManagement.Repositories;
 using System.Web.Http.Cors;
 using System.Linq;
 using System.Security.Claims;
+using System;
 
 namespace ProjectManagementSystem.Controllers
 {
@@ -19,8 +20,15 @@ namespace ProjectManagementSystem.Controllers
         [Route("")]
         public IHttpActionResult GetAll(string role = null, string status = null)
         {
-            var users = repo.GetAllUsers(role, status);
-            return Ok(users);
+            try
+            {
+                var users = repo.GetAllUsers(role, status);
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // GET: api/users/5
@@ -28,9 +36,15 @@ namespace ProjectManagementSystem.Controllers
         [Route("{id:int}")]
         public IHttpActionResult GetById(int id)
         {
-            var user = repo.GetUserById(id);
-            if (user == null) return NotFound();
-            return Ok(user);
+            try
+            {
+                var user = repo.GetUserById(id);
+                return user == null ? (IHttpActionResult)NotFound() : Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // PUT: api/users/5
@@ -38,20 +52,25 @@ namespace ProjectManagementSystem.Controllers
         [Route("{id:int}")]
         public IHttpActionResult Update(int id, User user)
         {
-            // ✅ Allow Admins or same user to update
-            var principal = User as ClaimsPrincipal;
-            string claimUserId = principal?.Claims.FirstOrDefault(c => c.Type == "UserID")?.Value;
-            string claimRoleId = principal?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+            try
+            {
+                var principal = User as ClaimsPrincipal;
+                string claimUserId = principal?.Claims.FirstOrDefault(c => c.Type == "UserID")?.Value;
+                string claimRoleId = principal?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
 
-            bool isAdmin = claimRoleId == "1";
-            bool isSameUser = claimUserId == id.ToString();
+                bool isAdmin = claimRoleId == "1";
+                bool isSameUser = claimUserId == id.ToString();
 
-            // 🔄 Temporarily allow update without auth
-            // You can enable this once JWT is enforced on frontend
-            // if (!isAdmin && !isSameUser) return Unauthorized();
+                // 🔓 Auth check placeholder (enable when enforcing)
+                // if (!isAdmin && !isSameUser) return Unauthorized();
 
-            var updatedUser = repo.UpdateUser(id, user);
-            return Ok(updatedUser);
+                var updatedUser = repo.UpdateUser(id, user);
+                return Ok(updatedUser);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // PUT: api/users/5/change-role
@@ -59,10 +78,17 @@ namespace ProjectManagementSystem.Controllers
         [Route("{id:int}/change-role")]
         public IHttpActionResult ChangeRole(int id, RoleChangeRequest request)
         {
-            if (!IsAdmin()) return Unauthorized();
+            try
+            {
+                if (!IsAdmin()) return Unauthorized();
 
-            var result = repo.ChangeUserRole(id, request.RoleID);
-            return result ? Ok("Role updated.") : (IHttpActionResult)BadRequest("Role change failed.");
+                var result = repo.ChangeUserRole(id, request.RoleID);
+                return result ? Ok("Role updated.") : (IHttpActionResult)BadRequest("Role change failed.");
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // DELETE: api/users/5
@@ -70,10 +96,17 @@ namespace ProjectManagementSystem.Controllers
         [Route("{id:int}")]
         public IHttpActionResult Delete(int id)
         {
-            if (!IsAdmin()) return Unauthorized();
+            try
+            {
+                if (!IsAdmin()) return Unauthorized();
 
-            var result = repo.DeleteUser(id);
-            return result ? Ok("User deleted.") : (IHttpActionResult)BadRequest("Delete failed.");
+                var result = repo.DeleteUser(id);
+                return result ? Ok("User deleted.") : (IHttpActionResult)BadRequest("Delete failed.");
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
         }
 
         // ✅ Helpers

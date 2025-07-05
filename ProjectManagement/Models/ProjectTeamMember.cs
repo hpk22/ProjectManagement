@@ -11,5 +11,7 @@ namespace ProjectManagement.Models
         public string Role { get; set; }
         public DateTime JoinDate { get; set; }
         public DateTime? ExitDate { get; set; }
+
+        public string FullName { get; set; }
     }
 }
