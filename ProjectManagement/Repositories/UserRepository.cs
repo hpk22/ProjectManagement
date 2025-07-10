@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using ProjectManagement.Models;
 
@@ -106,5 +107,19 @@ namespace ProjectManagement.Repositories
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
+
+        public bool ChangeUserStatus(int userId, string status)
+        {
+            using (var con = new SqlConnection(cs))
+            using (var cmd = new SqlCommand("sp_ChangeUserStatus", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                cmd.Parameters.AddWithValue("@Status", status);
+                con.Open();
+                return cmd.ExecuteNonQuery() > 0;
+            }
+        }
+
     }
 }

@@ -44,7 +44,7 @@ namespace ProjectManagement.Repositories
             }
         }
 
-        // ✅ Helper: Generate easy password like "Desk42"
+        
         private string GenerateEasyPassword()
         {
             var rand = new Random();

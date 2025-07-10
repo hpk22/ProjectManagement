@@ -109,6 +109,30 @@ namespace ProjectManagementSystem.Controllers
             }
         }
 
+        // PUT: api/users/5/change-status
+        [HttpPut]
+        [Route("{id:int}/change-status")]
+        public IHttpActionResult ChangeStatus(int id, StatusChangeRequest req)
+        {
+            try
+            {
+                if (!IsAdmin()) return Unauthorized();
+
+                var result = repo.ChangeUserStatus(id, req.Status);
+                return result ? Ok("Status updated.") : (IHttpActionResult)BadRequest("Update failed.");
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
+        public class StatusChangeRequest
+        {
+            public string Status { get; set; }
+        }
+
+
         // ✅ Helpers
         private bool IsAdmin()
         {

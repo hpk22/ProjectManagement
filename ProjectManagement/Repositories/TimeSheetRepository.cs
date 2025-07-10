@@ -32,6 +32,8 @@ namespace ProjectManagement.Repositories
                         TimeSheetID = (int)rdr["TimeSheetID"],
                         UserID = (int)rdr["UserID"],
                         ProjectID = (int)rdr["ProjectID"],
+                        TaskID = rdr["TaskID"] == DBNull.Value ? null : (int?)rdr["TaskID"],
+                        TaskName = rdr["TaskName"] == DBNull.Value ? null : rdr["TaskName"].ToString(),
                         WorkDate = (DateTime)rdr["WorkDate"],
                         HoursWorked = (decimal)rdr["HoursWorked"],
                         Description = rdr["Description"]?.ToString(),
@@ -56,6 +58,7 @@ namespace ProjectManagement.Repositories
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.AddWithValue("@UserID", t.UserID);
                 cmd.Parameters.AddWithValue("@ProjectID", t.ProjectID);
+                cmd.Parameters.AddWithValue("@TaskID",t.TaskID);
                 cmd.Parameters.AddWithValue("@WorkDate", t.WorkDate);
                 cmd.Parameters.AddWithValue("@HoursWorked", t.HoursWorked);
                 cmd.Parameters.AddWithValue("@Description", (object)t.Description ?? DBNull.Value);

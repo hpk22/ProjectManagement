@@ -116,6 +116,20 @@ namespace ProjectManagement.Repositories
                 return cmd.ExecuteNonQuery() > 0;
             }
         }
+        public bool RemoveTeamMember(int projectId, int userId)
+        {
+            using (SqlConnection con = new SqlConnection(cs))
+            using (SqlCommand cmd = new SqlCommand("sp_RemoveTeamMember", con))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.AddWithValue("@ProjectID", projectId);
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                con.Open();
+                int rowsAffected = cmd.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+        }
+
 
         public List<ProjectTeamMember> GetProjectTeam(int projectId)
         {

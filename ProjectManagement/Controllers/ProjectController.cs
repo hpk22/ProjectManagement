@@ -5,10 +5,12 @@ using System.Linq;
 using System.Security.Claims;
 using System.Web.Http;
 using ProjectManagement.Models;
+using System.Web.Http.Cors;
 using ProjectManagement.Repositories;
 
 namespace ProjectManagement.Controllers
 {
+    [EnableCors(origins: "*", headers: "*", methods: "*")]
     [Authorize]
     [RoutePrefix("api/projects")]
     public class ProjectController : ApiController
@@ -32,6 +34,8 @@ namespace ProjectManagement.Controllers
                     ProjectName = p.ProjectName,
                     Description = p.Description,
                     Status = p.Status,
+                    StartDate = p.StartDate,        // ✅ Include StartDate
+                    EndDate = p.EndDate,
                     Priority = p.Priority,
                     Budget = p.Budget,
                     ManagerID = p.ManagerID,
@@ -64,6 +68,8 @@ namespace ProjectManagement.Controllers
                     ProjectName = project.ProjectName,
                     Description = project.Description,
                     Status = project.Status,
+                    StartDate = project.StartDate,        // ✅ Include StartDate
+                    EndDate = project.EndDate,
                     Priority = project.Priority,
                     Budget = project.Budget,
                     ManagerID = project.ManagerID,
@@ -154,6 +160,24 @@ namespace ProjectManagement.Controllers
                 return InternalServerError(ex);
             }
         }
+        [HttpDelete]
+        [Route("{projectId}/team/{userId}")]
+        public IHttpActionResult RemoveTeamMember(int projectId, int userId)
+        {
+            try
+            {
+                bool removed = repo.RemoveTeamMember(projectId, userId);
+                if (removed)
+                    return Ok("Team member removed.");
+                else
+                    return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(ex);
+            }
+        }
+
 
         // ✅ DELETE: Delete project
         [HttpDelete]

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Web.Http;
 using ProjectManagement.Models;
 using ProjectManagement.Repositories;
@@ -53,21 +54,29 @@ namespace ProjectManagement.Controllers
             }
         }
 
-       
 
 
-        [HttpPut, Route("{id}/reject")]
+
+        [HttpPut]
+        [Route("{id}/reject")]
         public IHttpActionResult Reject(int id, [FromBody] string reason)
         {
             try
             {
-                int approverId = 2; // Replace with dynamic approver ID later
-                return Ok(repo.RejectTimesheet(id, reason, approverId));
+                // Read ApproverID from request header
+                if (!Request.Headers.Contains("ApproverID"))
+                    return BadRequest("Missing ApproverID header.");
+
+                int approverId = int.Parse(Request.Headers.GetValues("ApproverID").First());
+
+                repo.RejectTimesheet(id, reason, approverId);
+                return Ok("Timesheet rejected successfully.");
             }
             catch (Exception ex)
             {
                 return InternalServerError(ex);
             }
         }
+
     }
 }

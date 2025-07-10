@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
@@ -11,13 +12,13 @@ using ProjectManagement.Repositories;
 
 namespace ProjectManagement.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [RoutePrefix("api/documents")]
     public class DocumentController : ApiController
     {
         private readonly DocumentRepository repo = new DocumentRepository();
 
-        // POST: api/documents
+        // ✅ POST: api/documents
         [HttpPost, Route("")]
         public async Task<IHttpActionResult> Upload()
         {
@@ -61,12 +62,13 @@ namespace ProjectManagement.Controllers
                     }
                 }
 
-                // Get uploader ID from session
-                var sessionUserId = HttpContext.Current?.Session?["userId"];
-                if (sessionUserId == null)
+                // ✅ Extract userId from JWT token claims
+                var identity = User.Identity as ClaimsIdentity;
+                var userIdClaim = identity?.FindFirst("UserID");
+                if (userIdClaim == null)
                     return Unauthorized();
 
-                int uploaderId = Convert.ToInt32(sessionUserId);
+                int uploaderId = int.Parse(userIdClaim.Value);
 
                 int? projectId = null, taskId = null;
 
@@ -102,7 +104,7 @@ namespace ProjectManagement.Controllers
             }
         }
 
-        // GET: api/documents/all
+        // ✅ GET: api/documents/all
         [HttpGet, Route("all")]
         public IHttpActionResult GetAllDocuments()
         {
@@ -117,7 +119,7 @@ namespace ProjectManagement.Controllers
             }
         }
 
-        // GET: api/documents/{id}/download
+        // ✅ GET: api/documents/{id}/download
         [HttpGet, Route("{id}/download")]
         public HttpResponseMessage Download(int id)
         {
@@ -146,7 +148,7 @@ namespace ProjectManagement.Controllers
             }
         }
 
-        // DELETE: api/documents/{id}
+        // ✅ DELETE: api/documents/{id}
         [HttpDelete, Route("{id}")]
         public IHttpActionResult Delete(int id)
         {
